@@ -446,7 +446,7 @@ function ReconciliacaoColaborador({ competencia, recarregarChave }) {
 
 const COR_GRAFICO = "#660099";
 const COR_GRAFICO_2 = "#2f6fed";
-const ALTURA_BARRAS = 140;
+const ALTURA_BARRAS = 100;
 
 function rotuloCompetencia(competencia) {
   const [anoStr, mesStr] = competencia.split("-");
@@ -793,13 +793,13 @@ export default function HeExecutado() {
       </Row>
 
       <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={8}>
+        <Col span={5}>
           <GraficoExecutadoMensal competencia={competencia} recarregarChave={recarregarChave} modo={modoGraficos} />
         </Col>
-        <Col span={8}>
+        <Col span={6}>
           <GraficoTipoPosicao competencia={competencia} recarregarChave={recarregarChave} modo={modoGraficos} />
         </Col>
-        <Col span={8}>
+        <Col span={13}>
           <GraficoCargoAgrupado competencia={competencia} recarregarChave={recarregarChave} modo={modoGraficos} />
         </Col>
       </Row>
