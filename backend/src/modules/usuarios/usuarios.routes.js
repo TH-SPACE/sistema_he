@@ -1,10 +1,14 @@
 const express = require("express");
+const multer = require("multer");
+const ExcelJS = require("exceljs");
 const { z } = require("zod");
 const prisma = require("../../config/prisma");
 const { requirePerfil } = require("../../middlewares/rbac");
 const { registrarAuditoria, auditContext } = require("../../middlewares/audit");
+const { importarUsuarios } = require("./usuarios.import");
 
 const router = express.Router();
+const upload = multer({ storage: multer.memoryStorage() });
 
 router.get("/", requirePerfil("ADMIN"), async (req, res, next) => {
   try {
@@ -129,6 +133,59 @@ router.delete("/:id", requirePerfil("ADMIN"), async (req, res, next) => {
     });
 
     res.json({ data: true, error: null });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/modelo", requirePerfil("ADMIN"), async (req, res, next) => {
+  try {
+    // Usa um gerente de verdade já cadastrado como exemplo (em vez de um texto
+    // solto tipo "nome do gerente aqui"), para que o modelo baixado já possa
+    // ser importado sem erro, se o admin só quiser testar o fluxo.
+    const gerenteExemplo = await prisma.gerente.findFirst({ orderBy: { nome: "asc" } });
+    const nomeGerente = gerenteExemplo?.nome || "";
+
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet("Usuarios");
+    ws.columns = [
+      { header: "USERNAME", key: "username", width: 24 },
+      { header: "NOME", key: "nome", width: 32 },
+      { header: "EMAIL", key: "email", width: 30 },
+      { header: "PERFIL", key: "perfil", width: 16 },
+      { header: "GERENTE", key: "gerente", width: 28 },
+    ];
+    ws.getRow(1).font = { bold: true };
+    ws.addRow({ username: "joao.silva", nome: "João da Silva", email: "joao.silva@empresa.com", perfil: "SOLICITADOR", gerente: nomeGerente });
+    ws.addRow({ username: "maria.souza", nome: "Maria Souza", email: "maria.souza@empresa.com", perfil: "APROVADOR", gerente: "" });
+    ws.addRow({ username: "carlos.lima", nome: "Carlos Lima", email: "carlos.lima@empresa.com", perfil: "FOCAL", gerente: nomeGerente });
+
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", "attachment; filename=modelo_usuarios.xlsx");
+    await wb.xlsx.write(res);
+    res.end();
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/importar", requirePerfil("ADMIN"), upload.single("arquivo"), async (req, res, next) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ data: null, error: "Arquivo não enviado" });
+    }
+    const commit = req.query.commit === "true";
+    const resultado = await importarUsuarios(req.file.buffer, req.file.originalname, req.usuario.id, commit);
+    if (commit) {
+      await registrarAuditoria({
+        ...auditContext(req),
+        acao: "IMPORTAR_USUARIOS",
+        entidade: "LoteImportacao",
+        entidadeId: resultado.loteId,
+        dadosDepois: { totalLinhas: resultado.totalLinhas, inseridos: resultado.inseridos, erros: resultado.erros },
+      });
+    }
+    res.json({ data: resultado, error: null });
   } catch (err) {
     next(err);
   }

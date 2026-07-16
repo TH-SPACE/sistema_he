@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
-import { Row, Col, Card, Select, Button, Radio, InputNumber, DatePicker, Space, Typography, message, Modal, Tooltip, Popover } from "antd";
-import { PlusOutlined, DeleteOutlined, QuestionCircleOutlined } from "@ant-design/icons";
+import { Row, Col, Card, Select, Button, Radio, InputNumber, DatePicker, Space, Typography, message, Modal } from "antd";
+import { PlusOutlined, DeleteOutlined, BulbOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
@@ -11,6 +11,30 @@ import RotuloComDica from "../components/RotuloComDica";
 import { JUSTIFICATIVAS } from "../constants";
 
 const RASCUNHO_KEY = "he_rascunho_nova_solicitacao";
+const COR_COLABORADOR = "#2f6fed";
+
+function NumeroPasso({ n, cor = "var(--he-brand)" }) {
+  return (
+    <span
+      className="he-numero-passo"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: 22,
+        height: 22,
+        borderRadius: "50%",
+        background: cor,
+        color: "#fff",
+        fontSize: 12,
+        fontWeight: 700,
+        flexShrink: 0,
+      }}
+    >
+      {n}
+    </span>
+  );
+}
 
 let novoId = 0;
 let novoDataId = 0;
@@ -212,33 +236,19 @@ export default function NovaSolicitacao() {
     <Row gutter={16}>
       <Col span={17}>
         <Card
-          title={
-            <Space size={8}>
-              <PageTitle icon="vivo-formulario-folha-lapis-purpura-esquerda-320x320.svg">Nova Solicitação de Horas Extras</PageTitle>
-              <Popover
-                trigger="click"
-                title="Como preencher"
-                content={
-                  <div style={{ maxWidth: 320, fontWeight: 400 }}>
-                    Escolha o gerente responsável pela equipe, depois adicione um ou mais colaboradores. Para cada colaborador,
-                    informe a justificativa e depois, para cada dia trabalhado, selecione a data, o tipo (50% ou 100%) e a
-                    quantidade de horas — use o + para adicionar outros dias, cada um pode ter um tipo e uma quantidade de horas
-                    diferente. O resumo ao lado mostra o valor calculado em tempo real.
-                  </div>
-                }
-              >
-                <QuestionCircleOutlined style={{ color: "var(--he-text-muted)", cursor: "pointer", fontSize: 16 }} />
-              </Popover>
-            </Space>
-          }
-          style={{ marginBottom: 12 }}
+          className="he-card-passo"
+          title={<PageTitle icon="vivo-formulario-folha-lapis-purpura-esquerda-320x320.svg">Nova Solicitação de Horas Extras</PageTitle>}
+          style={{ marginBottom: 12, borderTop: "3px solid var(--he-brand)" }}
           styles={{ body: { padding: "12px 16px" } }}
         >
-          <Typography.Text strong>
-            <RotuloComDica dica="O gerente define o limite mensal de horas extras que será consumido por esta solicitação.">
-              Gerente
-            </RotuloComDica>
-          </Typography.Text>
+          <Space size={6} align="center" style={{ marginBottom: 4 }}>
+            <NumeroPasso n={1} />
+            <Typography.Text strong>
+              <RotuloComDica dica="O gerente define o limite mensal de horas extras que será consumido por esta solicitação.">
+                Gerente
+              </RotuloComDica>
+            </Typography.Text>
+          </Space>
           <Select
             showSearch
             optionFilterProp="label"
@@ -256,14 +266,20 @@ export default function NovaSolicitacao() {
         {linhas.map((linha, idx) => (
           <Card
             key={linha.key}
+            className="he-card-passo"
             size="small"
-            title={`Colaborador ${idx + 1}`}
+            title={
+              <Space size={6}>
+                <NumeroPasso n={idx + 2} cor={COR_COLABORADOR} />
+                <span>Colaborador {idx + 1}</span>
+              </Space>
+            }
             extra={
               linhas.length > 1 && (
                 <Button danger type="text" size="small" icon={<DeleteOutlined />} onClick={() => removerColaborador(linha.key)} />
               )
             }
-            style={{ marginBottom: 8 }}
+            style={{ marginBottom: 8, borderTop: `3px solid ${COR_COLABORADOR}` }}
           >
             <Row gutter={12}>
               <Col span={14}>
@@ -294,75 +310,76 @@ export default function NovaSolicitacao() {
                 />
               </Col>
               <Col span={24} style={{ marginTop: 8 }}>
-                <Row gutter={8}>
-                  <Col span={7}>
-                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                      <RotuloComDica dica="Cada linha é um dia de HE com seu próprio tipo (50% ou 100%) e quantidade de horas. Clique no + para adicionar outro dia.">
-                        Data
-                      </RotuloComDica>
-                    </Typography.Text>
-                  </Col>
-                  <Col span={8}><Typography.Text type="secondary" style={{ fontSize: 12 }}>Tipo</Typography.Text></Col>
-                  <Col span={5}><Typography.Text type="secondary" style={{ fontSize: 12 }}>Horas</Typography.Text></Col>
-                </Row>
-                <Space direction="vertical" style={{ width: "100%", marginTop: 4 }} size={6}>
-                  {linha.datas.map((d) => (
-                    <Row gutter={8} key={d.id} align="middle">
-                      <Col span={7}>
-                        <DatePicker
-                          size="small"
-                          style={{ width: "100%" }}
-                          format="DD/MM/YYYY"
-                          placeholder="Data"
-                          value={d.data}
-                          onChange={(v) => atualizarData(linha.key, d.id, "data", v)}
-                          disabledDate={(data) => linha.datas.some((outra) => outra.id !== d.id && outra.data && outra.data.isSame(data, "day"))}
-                        />
-                      </Col>
-                      <Col span={8}>
-                        <Radio.Group
-                          size="small"
-                          value={d.tipo}
-                          onChange={(e) => atualizarData(linha.key, d.id, "tipo", e.target.value)}
-                          style={{ display: "flex" }}
-                        >
-                          <Radio.Button value="PCT_50" style={{ flex: 1, textAlign: "center" }}>50%</Radio.Button>
-                          <Radio.Button value="PCT_100" style={{ flex: 1, textAlign: "center" }}>100%</Radio.Button>
-                        </Radio.Group>
-                      </Col>
-                      <Col span={5}>
-                        <InputNumber
-                          size="small"
-                          min={0.5}
-                          step={0.5}
-                          style={{ width: "100%" }}
-                          placeholder="Horas"
-                          value={d.horas}
-                          onChange={(v) => atualizarData(linha.key, d.id, "horas", v)}
-                        />
-                      </Col>
-                      <Col span={4}>
-                        <Button
-                          danger
-                          type="text"
-                          size="small"
-                          icon={<DeleteOutlined />}
-                          disabled={linha.datas.length === 1}
-                          onClick={() => removerData(linha.key, d.id)}
-                        />
-                      </Col>
-                    </Row>
-                  ))}
-                </Space>
-                <Button type="dashed" size="small" icon={<PlusOutlined />} onClick={() => adicionarData(linha.key)} style={{ marginTop: 6 }}>
-                  Adicionar data
-                </Button>
+                <div style={{ background: "var(--he-dica-bg)", border: "1px solid var(--he-dica-border)", borderRadius: 8, padding: "8px 10px 10px" }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 6, color: "var(--he-dica-text)", fontSize: 12, lineHeight: 1.4, marginBottom: 8 }}>
+                    <BulbOutlined style={{ marginTop: 2, flexShrink: 0 }} />
+                    <span>Cada linha é um dia de HE com seu próprio tipo (50% ou 100%) e quantidade de horas. Use o + para adicionar outro dia.</span>
+                  </div>
+                  <Row gutter={8}>
+                    <Col span={7}><Typography.Text type="secondary" style={{ fontSize: 12 }}>Data</Typography.Text></Col>
+                    <Col span={8}><Typography.Text type="secondary" style={{ fontSize: 12 }}>Tipo</Typography.Text></Col>
+                    <Col span={5}><Typography.Text type="secondary" style={{ fontSize: 12 }}>Horas</Typography.Text></Col>
+                  </Row>
+                  <Space direction="vertical" style={{ width: "100%", marginTop: 4 }} size={6}>
+                    {linha.datas.map((d) => (
+                      <Row gutter={8} key={d.id} align="middle" className="he-linha-data">
+                        <Col span={7}>
+                          <DatePicker
+                            size="small"
+                            style={{ width: "100%" }}
+                            format="DD/MM/YYYY"
+                            placeholder="Data"
+                            value={d.data}
+                            onChange={(v) => atualizarData(linha.key, d.id, "data", v)}
+                            disabledDate={(data) => linha.datas.some((outra) => outra.id !== d.id && outra.data && outra.data.isSame(data, "day"))}
+                          />
+                        </Col>
+                        <Col span={8}>
+                          <Radio.Group
+                            size="small"
+                            className="he-tipo-radio"
+                            value={d.tipo}
+                            onChange={(e) => atualizarData(linha.key, d.id, "tipo", e.target.value)}
+                            style={{ display: "flex" }}
+                          >
+                            <Radio.Button value="PCT_50" style={{ flex: 1, textAlign: "center" }}>50%</Radio.Button>
+                            <Radio.Button value="PCT_100" style={{ flex: 1, textAlign: "center" }}>100%</Radio.Button>
+                          </Radio.Group>
+                        </Col>
+                        <Col span={5}>
+                          <InputNumber
+                            size="small"
+                            min={0.5}
+                            step={0.5}
+                            style={{ width: "100%" }}
+                            placeholder="Horas"
+                            value={d.horas}
+                            onChange={(v) => atualizarData(linha.key, d.id, "horas", v)}
+                          />
+                        </Col>
+                        <Col span={4}>
+                          <Button
+                            danger
+                            type="text"
+                            size="small"
+                            icon={<DeleteOutlined />}
+                            disabled={linha.datas.length === 1}
+                            onClick={() => removerData(linha.key, d.id)}
+                          />
+                        </Col>
+                      </Row>
+                    ))}
+                  </Space>
+                  <Button type="dashed" size="small" icon={<PlusOutlined />} onClick={() => adicionarData(linha.key)} style={{ marginTop: 8, borderColor: "var(--he-brand)", color: "var(--he-brand)" }}>
+                    Adicionar data
+                  </Button>
+                </div>
               </Col>
             </Row>
           </Card>
         ))}
 
-        <Button type="dashed" icon={<PlusOutlined />} onClick={adicionarColaborador} block style={{ marginBottom: 16 }}>
+        <Button type="dashed" icon={<PlusOutlined />} onClick={adicionarColaborador} block style={{ marginBottom: 16, borderColor: COR_COLABORADOR, color: COR_COLABORADOR }}>
           Adicionar colaborador
         </Button>
 

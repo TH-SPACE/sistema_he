@@ -185,7 +185,7 @@ model HeExecutado {
 
 model LoteImportacao {
   id           Int      @id @default(autoincrement())
-  tipo         String // "COLABORADORES" | "HE_EXECUTADO"
+  tipo         String // "COLABORADORES" | "HE_EXECUTADO" | "USUARIOS"
   arquivoNome  String
   totalLinhas  Int
   inseridos    Int

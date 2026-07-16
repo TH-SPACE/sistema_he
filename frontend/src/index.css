@@ -108,6 +108,10 @@ body {
   --he-text-muted: rgba(0, 0, 0, 0.65);
   --he-text-disabled: rgba(0, 0, 0, 0.35);
   --he-link: #1677ff;
+  --he-brand: #660099;
+  --he-dica-bg: #f5edfb;
+  --he-dica-border: #dcc2ec;
+  --he-dica-text: #660099;
 }
 
 :root[data-theme="dark"] {
@@ -122,6 +126,10 @@ body {
   --he-text-muted: rgba(255, 255, 255, 0.68);
   --he-text-disabled: rgba(255, 255, 255, 0.3);
   --he-link: #4096ff;
+  --he-brand: #c993ec;
+  --he-dica-bg: rgba(192, 132, 236, 0.12);
+  --he-dica-border: rgba(192, 132, 236, 0.35);
+  --he-dica-text: #c993ec;
 }
 
 @media (max-width: 900px) {
@@ -190,4 +198,57 @@ body {
 .kpi-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.07);
+}
+
+/* Nova Solicitação: feedback visual ao passar o mouse, para deixar claro
+   o que é interativo sem precisar de texto explicando. */
+.he-card-passo {
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.he-card-passo:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.09);
+}
+
+.he-numero-passo {
+  transition: transform 0.15s ease;
+}
+
+.he-card-passo:hover .he-numero-passo {
+  transform: scale(1.15);
+}
+
+.he-linha-data {
+  border-radius: 6px;
+  transition: background-color 0.15s ease;
+  padding: 2px 4px;
+  margin: -2px -4px;
+}
+
+.he-linha-data:hover {
+  background: rgba(102, 0, 153, 0.06);
+}
+
+:root[data-theme="dark"] .he-linha-data:hover {
+  background: rgba(201, 147, 236, 0.1);
+}
+
+/* Tipo 50%/100% com cores diferentes quando selecionado (mesmas cores usadas
+   nos gráficos do HE Executado: 50% = roxo, 100% = azul), para dar pra ver
+   qual está marcado sem precisar ler o texto. */
+.he-tipo-radio .ant-radio-button-wrapper:first-child.ant-radio-button-wrapper-checked {
+  background: var(--he-brand) !important;
+  border-color: var(--he-brand) !important;
+  color: #fff !important;
+}
+
+.he-tipo-radio .ant-radio-button-wrapper:last-child.ant-radio-button-wrapper-checked {
+  background: #2f6fed !important;
+  border-color: #2f6fed !important;
+  color: #fff !important;
+}
+
+.he-tipo-radio .ant-radio-button-wrapper:last-child.ant-radio-button-wrapper-checked::before {
+  background-color: #2f6fed !important;
 }

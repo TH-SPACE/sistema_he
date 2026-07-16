@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Card, Table, Tag, Button, Space, Modal, Form, Input, Select, message, Popconfirm } from "antd";
-import { CheckOutlined, DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
+import { Card, Table, Tag, Button, Space, Modal, Form, Input, Select, Upload, message, Popconfirm, Alert } from "antd";
+import { CheckOutlined, DeleteOutlined, DownloadOutlined, EditOutlined, PlusOutlined, UploadOutlined } from "@ant-design/icons";
 import api from "../../services/api";
 import PageTitle from "../../components/PageTitle";
 
@@ -16,6 +16,11 @@ export default function Usuarios() {
   const [aprovandoId, setAprovandoId] = useState(null);
   const [excluindoId, setExcluindoId] = useState(null);
   const [form] = Form.useForm();
+  const [importModal, setImportModal] = useState(false);
+  const [resultadoImport, setResultadoImport] = useState(null);
+  const [arquivoImport, setArquivoImport] = useState(null);
+  const [importando, setImportando] = useState(false);
+  const [baixandoModelo, setBaixandoModelo] = useState(false);
 
   const carregar = useCallback(async () => {
     setCarregando(true);
@@ -85,6 +90,62 @@ export default function Usuarios() {
     }
   }
 
+  async function baixarModelo() {
+    setBaixandoModelo(true);
+    try {
+      const res = await api.get("/usuarios/modelo", { responseType: "blob" });
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "modelo_usuarios.xlsx";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      message.error(err.message);
+    } finally {
+      setBaixandoModelo(false);
+    }
+  }
+
+  async function processarPreview() {
+    if (!arquivoImport) return message.warning("Selecione um arquivo");
+    setProcessandoPreview(true);
+    try {
+      const formData = new FormData();
+      formData.append("arquivo", arquivoImport);
+      const { data } = await api.post("/usuarios/importar?commit=false", formData, { headers: { "Content-Type": "multipart/form-data" } });
+      setResultadoImport(data.data);
+    } catch (err) {
+      message.error(err.message);
+    } finally {
+      setProcessandoPreview(false);
+    }
+  }
+
+  async function confirmarImportacao() {
+    setConfirmandoImportacao(true);
+    try {
+      const formData = new FormData();
+      formData.append("arquivo", arquivoImport);
+      const { data } = await api.post("/usuarios/importar?commit=true", formData, { headers: { "Content-Type": "multipart/form-data" } });
+      message.success(`Importação concluída: ${data.data.inseridos} usuário(s)`);
+      setImportModal(false);
+      setResultadoImport(null);
+      setArquivoImport(null);
+      await carregar();
+    } catch (err) {
+      message.error(err.message);
+    } finally {
+      setConfirmandoImportacao(false);
+    }
+  }
+
+  function fecharImportModal() {
+    setImportModal(false);
+    setResultadoImport(null);
+    setArquivoImport(null);
+  }
+
   const colunas = [
     { title: "Usuário", dataIndex: "username" },
     { title: "Nome", dataIndex: "nome" },
@@ -112,7 +173,15 @@ export default function Usuarios() {
   ];
 
   return (
-    <Card title={<PageTitle icon="vivo-vivinho-escudo-purpura-esquerda-320x320.svg">Usuários</PageTitle>} extra={<Button type="primary" icon={<PlusOutlined />} onClick={() => abrirEdicao({})}>Novo usuário</Button>}>
+    <Card
+      title={<PageTitle icon="vivo-vivinho-escudo-purpura-esquerda-320x320.svg">Usuários</PageTitle>}
+      extra={
+        <Space>
+          <Button icon={<UploadOutlined />} onClick={() => setImportModal(true)}>Importar planilha</Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => abrirEdicao({})}>Novo usuário</Button>
+        </Space>
+      }
+    >
       <div style={{ marginBottom: 12, fontSize: 12, color: "var(--he-text-muted)" }}>
         Usuários com status <Tag color="gold" style={{ marginInline: 4 }}>PENDENTE</Tag> se cadastraram pelo login mas ainda
         precisam ser aprovados aqui antes de conseguir acessar o sistema.
@@ -150,6 +219,51 @@ export default function Usuarios() {
             <Select options={["PENDENTE", "ATIVO", "INATIVO"].map((s) => ({ value: s, label: s }))} />
           </Form.Item>
         </Form>
+      </Modal>
+
+      <Modal
+        title="Importar usuários.xlsx"
+        open={importModal}
+        onCancel={fecharImportModal}
+        footer={
+          resultadoImport
+            ? [
+                <Button key="cancel" onClick={() => setResultadoImport(null)}>Voltar</Button>,
+                <Button key="confirm" type="primary" loading={confirmandoImportacao} onClick={confirmarImportacao}>Confirmar importação</Button>,
+              ]
+            : [
+                <Button key="modelo" icon={<DownloadOutlined />} loading={baixandoModelo} onClick={baixarModelo}>Baixar modelo</Button>,
+                <Button key="preview" type="primary" loading={processandoPreview} onClick={processarPreview}>Pré-visualizar</Button>,
+              ]
+        }
+      >
+        {!resultadoImport ? (
+          <>
+            <div style={{ marginBottom: 12, fontSize: 12, color: "var(--he-text-muted)" }}>
+              O arquivo deve ter as colunas Username, Nome, Email, Perfil (SOLICITADOR, APROVADOR, FOCAL ou ADMIN — vazio vira
+              SOLICITADOR) e Gerente (nome do gerente já cadastrado; opcional, ignorado para APROVADOR). Baixe o modelo abaixo
+              para ver o formato esperado.
+            </div>
+            <Upload beforeUpload={(file) => { setArquivoImport(file); return false; }} maxCount={1}>
+              <Button icon={<UploadOutlined />}>Selecionar arquivo .xlsx</Button>
+            </Upload>
+          </>
+        ) : (
+          <>
+            <Alert
+              style={{ marginBottom: 12 }}
+              type={resultadoImport.erros > 0 ? "warning" : "success"}
+              message={`${resultadoImport.totalLinhas} linhas — ${resultadoImport.inseridos} válidas — ${resultadoImport.erros} com erro`}
+            />
+            {resultadoImport.detalheErros?.length > 0 && (
+              <div style={{ maxHeight: 200, overflow: "auto", fontSize: 12 }}>
+                {resultadoImport.detalheErros.map((e, i) => (
+                  <div key={i}>Linha {e.linha}: {e.erro}</div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
       </Modal>
     </Card>
   );
