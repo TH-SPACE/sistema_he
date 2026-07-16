@@ -136,8 +136,8 @@ model SolicitacaoItem {
   id            Int         @id @default(autoincrement())
   solicitacaoId Int
   solicitacao   Solicitacao @relation(fields: [solicitacaoId], references: [id], onDelete: Cascade)
-  colaboradorId Int
-  colaborador   Colaborador @relation(fields: [colaboradorId], references: [id])
+  colaboradorId Int?
+  colaborador   Colaborador? @relation(fields: [colaboradorId], references: [id], onDelete: SetNull)
   colaboradorNomeSnapshot String?
   dataHe        DateTime    @db.Date
   tipo          TipoHe

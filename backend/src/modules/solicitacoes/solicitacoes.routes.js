@@ -371,6 +371,9 @@ router.put("/itens/:itemId", async (req, res, next) => {
     if (!isAdmin && item.status === "APROVADO") {
       return res.status(409).json({ data: null, error: "Item aprovado não pode ser editado" });
     }
+    if (!item.colaborador) {
+      return res.status(409).json({ data: null, error: "O colaborador deste item foi excluído do sistema; não é possível recalcular o valor." });
+    }
 
     const dados = editarItemSchema.parse(req.body);
     const tipo = dados.tipo || item.tipo;

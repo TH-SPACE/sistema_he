@@ -8,8 +8,10 @@ const router = express.Router();
 
 function aplicarSnapshotSolicitante(item) {
   const solicitanteNome = item.solicitacao.solicitante?.nome || item.solicitacao.solicitanteNomeSnapshot || "Não informado";
+  const colaboradorNome = item.colaboradorNomeSnapshot || item.colaborador?.nome || "Não informado";
   return {
     ...item,
+    colaborador: { ...(item.colaborador || {}), nome: colaboradorNome },
     solicitacao: {
       ...item.solicitacao,
       solicitante: { ...(item.solicitacao.solicitante || {}), nome: solicitanteNome },

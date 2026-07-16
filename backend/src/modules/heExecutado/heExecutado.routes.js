@@ -262,8 +262,9 @@ async function montarRegistrosReconciliacao(competencia, gerenteIdEscopo) {
   };
 
   for (const item of itensAprovados) {
-    const chave = normalizarNome(item.colaborador.nome);
-    const reg = registrar(chave, item.colaborador.nome, item.colaborador.gerenteId, item.colaborador.gerente.nome);
+    const nomeColaborador = item.colaboradorNomeSnapshot || item.colaborador?.nome || "Não informado";
+    const chave = normalizarNome(nomeColaborador);
+    const reg = registrar(chave, nomeColaborador, item.colaborador?.gerenteId, item.colaborador?.gerente?.nome);
     reg.horasAprovadas += Number(item.horas);
   }
   for (const exec of executados) {
@@ -384,8 +385,9 @@ router.get("/reconciliacao/gerencias", requirePerfil("SOLICITADOR", "APROVADOR",
     };
 
     for (const item of itensAprovados) {
-      const chave = normalizarNome(item.colaborador.nome);
-      const reg = registrarPessoa(chave, item.colaborador.gerenteId, item.colaborador.gerente.nome, item.colaborador.gerente.gerenciaSr);
+      const nomeColaborador = item.colaboradorNomeSnapshot || item.colaborador?.nome || "Não informado";
+      const chave = normalizarNome(nomeColaborador);
+      const reg = registrarPessoa(chave, item.colaborador?.gerenteId, item.colaborador?.gerente?.nome, item.colaborador?.gerente?.gerenciaSr);
       const sufixo = item.tipo === "PCT_100" ? "100" : "50";
       reg[`autorizado${sufixo}Horas`] += Number(item.horas);
       reg[`autorizado${sufixo}Valor`] += Number(item.valorCalculado);
@@ -517,12 +519,12 @@ router.get("/reconciliacao/gerencias/detalhe", requirePerfil("SOLICITADOR", "APR
         orderBy: { dataHe: "asc" },
       });
       const linhas = itens.map((i) => ({
-        nome: i.colaborador.nome,
+        nome: i.colaboradorNomeSnapshot || i.colaborador?.nome || "Não informado",
         data: i.dataHe,
         tipo: i.tipo,
         horas: Number(i.horas),
         valor: Number(i.valorCalculado),
-        solicitante: i.solicitacao.solicitante.nome,
+        solicitante: i.solicitacao.solicitanteNomeSnapshot || i.solicitacao.solicitante?.nome || "Não informado",
         protocolo: i.solicitacao.protocolo,
       }));
       return res.json({ data: { grupo: "autorizado", linhas }, error: null });

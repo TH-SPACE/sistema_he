@@ -106,7 +106,7 @@ router.get("/resumo-horas/detalhe", async (req, res, next) => {
       id: item.id,
       protocolo: item.solicitacao.protocolo,
       gerente: item.solicitacao.gerente.nome,
-      colaborador: item.colaborador.nome,
+      colaborador: item.colaboradorNomeSnapshot || item.colaborador?.nome || "Não informado",
       dataHe: item.dataHe,
       tipo: item.tipo,
       horas: Number(item.horas),
