@@ -1,0 +1,215 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Perfil {
+  SOLICITADOR
+  APROVADOR
+  FOCAL
+  ADMIN
+}
+
+enum StatusUsuario {
+  PENDENTE
+  ATIVO
+  INATIVO
+}
+
+enum TipoHe {
+  PCT_50
+  PCT_100
+}
+
+enum StatusItem {
+  PENDENTE_APROVACAO
+  APROVADO
+  RECUSADO
+}
+
+enum Justificativa {
+  B2B_AVANCADO
+  CELULA_AGENDAMENTO_REGIONAL
+  IMPLANTACAO
+  PROJETOS_ESPECIAIS
+  BACKOFFICE
+  REPARO
+  PRODUCAO
+  MANUTENCAO_DE_REDES
+  MOVEL
+  O_E_M
+}
+
+// Entidade de limite de HE. Chave = nome do gerente (pessoa), conforme
+// VALOR_GERENTES.xlsx — nao e o departamento (campo GERENCIA do colaborador).
+model Gerente {
+  id           Int      @id @default(autoincrement())
+  nome         String   @unique
+  valorLimite  Decimal  @db.Decimal(12, 2)
+  gerenciaSr   String? // gerente sênior/divisão a quem este gerente se reporta - so' para agrupamento de relatorios
+  ativo        Boolean  @default(true)
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  colaboradores Colaborador[]
+  solicitacoes  Solicitacao[]
+  usuarios      Usuario[]
+}
+
+model Cargo {
+  id            Int      @id @default(autoincrement())
+  nome          String   @unique
+  valorHora50   Decimal  @db.Decimal(12, 2) // HE 50% (R$)
+  valorHora100  Decimal  @db.Decimal(12, 2) // HE 100% (R$)
+  ativo         Boolean  @default(true)
+  criadoEm      DateTime @default(now())
+  atualizadoEm  DateTime @updatedAt
+
+  colaboradores Colaborador[]
+}
+
+model Colaborador {
+  id           Int      @id @default(autoincrement())
+  matricula    String   @unique
+  nome         String
+  cargoId      Int
+  cargo        Cargo    @relation(fields: [cargoId], references: [id])
+  gerenteId    Int
+  gerente      Gerente  @relation(fields: [gerenteId], references: [id])
+  gerencia     String? // departamento (COLABORADORES.xlsx: GERENCIA) - informativo
+  regional     String?
+  estado       String?
+  cidade       String?
+  gestorDireto String?
+  ativo        Boolean  @default(true)
+  itens        SolicitacaoItem[]
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@index([gerenteId])
+  @@index([cargoId])
+}
+
+model Usuario {
+  id           Int           @id @default(autoincrement())
+  username     String        @unique // sAMAccountName do AD / DEV_USER
+  nome         String
+  email        String?
+  cargoSolicitante String?
+  perfil       Perfil        @default(SOLICITADOR)
+  status       StatusUsuario @default(PENDENTE)
+  gerenteId    Int?
+  gerente      Gerente?      @relation(fields: [gerenteId], references: [id])
+  criadoEm     DateTime      @default(now())
+  atualizadoEm DateTime      @updatedAt
+
+  solicitacoes Solicitacao[]     @relation("SolicitanteSolic")
+  decisoes     SolicitacaoItem[] @relation("AprovadorItem")
+  auditorias   Auditoria[]
+  lotes        LoteImportacao[]
+}
+
+model Solicitacao {
+  id            Int      @id @default(autoincrement())
+  protocolo     String   @unique
+  gerenteId     Int
+  gerente       Gerente  @relation(fields: [gerenteId], references: [id])
+  gerenteNomeSnapshot String?
+  solicitanteId Int?
+  solicitante   Usuario? @relation("SolicitanteSolic", fields: [solicitanteId], references: [id], onDelete: SetNull)
+  solicitanteNomeSnapshot String?
+  observacao    String?
+  criadoEm      DateTime @default(now())
+  atualizadoEm  DateTime @updatedAt
+
+  itens SolicitacaoItem[]
+
+  @@index([gerenteId])
+  @@index([solicitanteId])
+}
+
+model SolicitacaoItem {
+  id            Int         @id @default(autoincrement())
+  solicitacaoId Int
+  solicitacao   Solicitacao @relation(fields: [solicitacaoId], references: [id], onDelete: Cascade)
+  colaboradorId Int
+  colaborador   Colaborador @relation(fields: [colaboradorId], references: [id])
+  colaboradorNomeSnapshot String?
+  dataHe        DateTime    @db.Date
+  tipo          TipoHe
+  horas         Decimal     @db.Decimal(5, 2)
+  justificativa Justificativa
+  // snapshot no momento da criacao (valor ja e o valor de HE, sem multiplicador):
+  valorHora      Decimal    @db.Decimal(12, 2)
+  valorCalculado Decimal    @db.Decimal(12, 2)
+  status         StatusItem @default(PENDENTE_APROVACAO)
+  aprovadorId    Int?
+  aprovador      Usuario?   @relation("AprovadorItem", fields: [aprovadorId], references: [id])
+  dataDecisao    DateTime?
+  motivoRecusa   String?
+  criadoEm       DateTime   @default(now())
+  atualizadoEm   DateTime   @updatedAt
+
+  @@index([colaboradorId, dataHe])
+  @@index([status])
+}
+
+model HeExecutado {
+  id              Int            @id @default(autoincrement())
+  matricula       String
+  nome            String?
+  dataHe          DateTime       @db.Date
+  horas           Decimal        @db.Decimal(6, 2)
+  tipo            TipoHe? // derivado do texto de EVENTO; nulo quando nao e HE (ajuste de ponto etc.)
+  eventoOriginal  String?
+  competencia     String // "2026-07"
+  cargo           String?
+  tipoPosicao2    String?
+  cargoAgrupado   String?
+  gestorImediato  String?
+  gerenteImediato String?
+  gerenteDivisao  String?
+  cluster         String?
+  cidade          String?
+  diretoria       String?
+  loteImportId    Int
+  loteImport      LoteImportacao @relation(fields: [loteImportId], references: [id])
+
+  @@index([matricula, dataHe])
+  @@index([competencia])
+}
+
+model LoteImportacao {
+  id           Int      @id @default(autoincrement())
+  tipo         String // "COLABORADORES" | "HE_EXECUTADO"
+  arquivoNome  String
+  totalLinhas  Int
+  inseridos    Int
+  erros        Int
+  detalheErros Json?
+  usuarioId    Int?
+  usuario      Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  criadoEm     DateTime @default(now())
+
+  executados HeExecutado[]
+}
+
+model Auditoria {
+  id          Int      @id @default(autoincrement())
+  usuarioId   Int?
+  usuario     Usuario? @relation(fields: [usuarioId], references: [id])
+  acao        String
+  entidade    String
+  entidadeId  String?
+  dadosAntes  Json?
+  dadosDepois Json?
+  ip          String?
+  criadoEm    DateTime @default(now())
+
+  @@index([entidade, entidadeId])
+  @@index([criadoEm])
+}

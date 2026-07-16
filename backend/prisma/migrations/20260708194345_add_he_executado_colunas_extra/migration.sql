@@ -1,0 +1,11 @@
+-- AlterTable
+ALTER TABLE `HeExecutado`
+  ADD COLUMN `cargo` VARCHAR(191) NULL,
+  ADD COLUMN `tipoPosicao2` VARCHAR(191) NULL,
+  ADD COLUMN `cargoAgrupado` VARCHAR(191) NULL,
+  ADD COLUMN `gestorImediato` VARCHAR(191) NULL,
+  ADD COLUMN `gerenteImediato` VARCHAR(191) NULL,
+  ADD COLUMN `gerenteDivisao` VARCHAR(191) NULL,
+  ADD COLUMN `cluster` VARCHAR(191) NULL,
+  ADD COLUMN `cidade` VARCHAR(191) NULL,
+  ADD COLUMN `diretoria` VARCHAR(191) NULL;
