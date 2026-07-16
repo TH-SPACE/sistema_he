@@ -1,5 +1,6 @@
 const prisma = require("../../config/prisma");
 const { calcularItem, competenciaDe } = require("../../utils/calculoHe");
+const { normalizarNome } = require("../../utils/texto");
 
 // Expande o rascunho (gerente + lista de colaboradores, cada um com várias
 // datas, cada uma com seu próprio tipo e quantidade de horas) no produto
@@ -49,20 +50,44 @@ async function resumoLimite({ gerenteId, itens }) {
   const fimMes = new Date(inicioMes);
   fimMes.setUTCMonth(fimMes.getUTCMonth() + 1);
 
-  const jaSolicitados = await prisma.solicitacaoItem.findMany({
-    where: {
-      status: { in: ["PENDENTE_APROVACAO", "APROVADO"] },
-      dataHe: { gte: inicioMes, lt: fimMes },
-      solicitacao: { gerenteId },
-    },
-    select: { valorCalculado: true, status: true },
-  });
+  const [jaSolicitados, colaboradoresGerencia, ultimoLoteExecutado] = await Promise.all([
+    prisma.solicitacaoItem.findMany({
+      where: {
+        status: { in: ["PENDENTE_APROVACAO", "APROVADO"] },
+        dataHe: { gte: inicioMes, lt: fimMes },
+        solicitacao: { gerenteId },
+      },
+      select: { valorCalculado: true, status: true },
+    }),
+    prisma.colaborador.findMany({ where: { gerenteId }, select: { nome: true, cargo: { select: { valorHora50: true, valorHora100: true } } } }),
+    prisma.loteImportacao.findFirst({ where: { tipo: "HE_EXECUTADO" }, orderBy: { criadoEm: "desc" } }),
+  ]);
 
   const valorAprovado = jaSolicitados.filter((i) => i.status === "APROVADO").reduce((acc, i) => acc + Number(i.valorCalculado), 0);
   const valorPendente = jaSolicitados.filter((i) => i.status === "PENDENTE_APROVACAO").reduce((acc, i) => acc + Number(i.valorCalculado), 0);
   const valorJaSolicitado = valorAprovado + valorPendente;
   const valorDestaSolicitacao = itens.reduce((acc, i) => acc + Number(i.valorCalculado), 0);
   const valorAposSolicitar = valorJaSolicitado + valorDestaSolicitacao;
+
+  // HE executado (§11.3): cruzamento por nome com a base externa, mesma
+  // lógica da reconciliação, para mostrar no Resumo de Limite quanto a
+  // gerência inteira já bateu no ponto na competência atual — em horas e em
+  // R$ (a base executada não traz valor, então recalcula com o valor de
+  // hora atual do cargo de cada colaborador).
+  const cargoPorNome = new Map(colaboradoresGerencia.map((c) => [normalizarNome(c.nome), c.cargo]));
+  const executados = cargoPorNome.size
+    ? await prisma.heExecutado.findMany({ where: { competencia: competenciaAtual, tipo: { not: null } } })
+    : [];
+  let horasExecutadas = 0;
+  let valorExecutado = 0;
+  for (const e of executados) {
+    const cargo = cargoPorNome.get(normalizarNome(e.nome));
+    if (!cargo) continue;
+    const horas = Number(e.horas);
+    const valorHora = e.tipo === "PCT_100" ? Number(cargo.valorHora100) : Number(cargo.valorHora50);
+    horasExecutadas += horas;
+    valorExecutado += horas * valorHora;
+  }
 
   return {
     gerenteId,
@@ -75,6 +100,9 @@ async function resumoLimite({ gerenteId, itens }) {
     valorDestaSolicitacao,
     valorAposSolicitar,
     acimaDoLimite: valorAposSolicitar > Number(gerente.valorLimite),
+    horasExecutadas: Number(horasExecutadas.toFixed(2)),
+    valorExecutado: Number(valorExecutado.toFixed(2)),
+    executadoAtualizadoEm: ultimoLoteExecutado?.criadoEm || null,
   };
 }
 

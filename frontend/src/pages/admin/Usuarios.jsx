@@ -107,37 +107,26 @@ export default function Usuarios() {
     }
   }
 
-  async function processarPreview() {
+  async function importar() {
     if (!arquivoImport) return message.warning("Selecione um arquivo");
-    setProcessandoPreview(true);
-    try {
-      const formData = new FormData();
-      formData.append("arquivo", arquivoImport);
-      const { data } = await api.post("/usuarios/importar?commit=false", formData, { headers: { "Content-Type": "multipart/form-data" } });
-      setResultadoImport(data.data);
-    } catch (err) {
-      message.error(err.message);
-    } finally {
-      setProcessandoPreview(false);
-    }
-  }
-
-  async function confirmarImportacao() {
-    setConfirmandoImportacao(true);
+    setImportando(true);
     try {
       const formData = new FormData();
       formData.append("arquivo", arquivoImport);
       const { data } = await api.post("/usuarios/importar?commit=true", formData, { headers: { "Content-Type": "multipart/form-data" } });
-      message.success(`Importação concluída: ${data.data.inseridos} usuário(s)`);
-      setImportModal(false);
-      setResultadoImport(null);
+      setResultadoImport(data.data);
       setArquivoImport(null);
       await carregar();
     } catch (err) {
       message.error(err.message);
     } finally {
-      setConfirmandoImportacao(false);
+      setImportando(false);
     }
+  }
+
+  function importarOutroArquivo() {
+    setResultadoImport(null);
+    setArquivoImport(null);
   }
 
   function fecharImportModal() {
@@ -228,12 +217,12 @@ export default function Usuarios() {
         footer={
           resultadoImport
             ? [
-                <Button key="cancel" onClick={() => setResultadoImport(null)}>Voltar</Button>,
-                <Button key="confirm" type="primary" loading={confirmandoImportacao} onClick={confirmarImportacao}>Confirmar importação</Button>,
+                <Button key="outro" onClick={importarOutroArquivo}>Importar outro arquivo</Button>,
+                <Button key="fechar" type="primary" onClick={() => setImportModal(false)}>Fechar</Button>,
               ]
             : [
                 <Button key="modelo" icon={<DownloadOutlined />} loading={baixandoModelo} onClick={baixarModelo}>Baixar modelo</Button>,
-                <Button key="preview" type="primary" loading={processandoPreview} onClick={processarPreview}>Pré-visualizar</Button>,
+                <Button key="importar" type="primary" loading={importando} onClick={importar}>Importar</Button>,
               ]
         }
       >
@@ -242,9 +231,10 @@ export default function Usuarios() {
             <div style={{ marginBottom: 12, fontSize: 12, color: "var(--he-text-muted)" }}>
               O arquivo deve ter as colunas Username, Nome, Email, Perfil (SOLICITADOR, APROVADOR, FOCAL ou ADMIN — vazio vira
               SOLICITADOR) e Gerente (nome do gerente já cadastrado; opcional, ignorado para APROVADOR). Baixe o modelo abaixo
-              para ver o formato esperado.
+              para ver o formato esperado. Linhas com erro não bloqueiam as demais — ao final você vê o que foi importado e o
+              que precisa corrigir.
             </div>
-            <Upload beforeUpload={(file) => { setArquivoImport(file); return false; }} maxCount={1}>
+            <Upload beforeUpload={(file) => { setArquivoImport(file); return false; }} onRemove={() => setArquivoImport(null)} maxCount={1}>
               <Button icon={<UploadOutlined />}>Selecionar arquivo .xlsx</Button>
             </Upload>
           </>
@@ -253,12 +243,15 @@ export default function Usuarios() {
             <Alert
               style={{ marginBottom: 12 }}
               type={resultadoImport.erros > 0 ? "warning" : "success"}
-              message={`${resultadoImport.totalLinhas} linhas — ${resultadoImport.inseridos} válidas — ${resultadoImport.erros} com erro`}
+              showIcon
+              message={`${resultadoImport.totalLinhas} linhas — ${resultadoImport.inseridos} importados — ${resultadoImport.erros} com erro`}
             />
             {resultadoImport.detalheErros?.length > 0 && (
-              <div style={{ maxHeight: 200, overflow: "auto", fontSize: 12 }}>
+              <div style={{ maxHeight: 240, overflow: "auto", fontSize: 12 }}>
                 {resultadoImport.detalheErros.map((e, i) => (
-                  <div key={i}>Linha {e.linha}: {e.erro}</div>
+                  <div key={i} style={{ padding: "4px 0", borderBottom: "1px solid var(--he-border)" }}>
+                    <strong>Linha {e.linha}</strong>{e.username ? ` (usuário ${e.username})` : ""}: {e.erro}
+                  </div>
                 ))}
               </div>
             )}

@@ -393,16 +393,18 @@ export default function NovaSolicitacao() {
       </Col>
 
       <Col span={7}>
-        <ResumoLimite resumo={preview?.resumo || resumoBase} totalItens={preview?.itens?.length || 0} />
-        {preview?.itens?.length > 0 && (
-          <Card title="Itens que serão gerados" size="small" style={{ marginTop: 16 }}>
-            {preview.itens.map((i, idx) => (
-              <div key={idx} style={{ fontSize: 12, marginBottom: 4 }}>
-                {i.colaboradorNome} — {dayjs(i.dataHe).format("DD/MM/YYYY")} — {i.tipo === "PCT_50" ? "50%" : "100%"} — {i.horas}h
-              </div>
-            ))}
-          </Card>
-        )}
+        <div style={{ position: "sticky", top: 16, maxHeight: "calc(100vh - 32px)", overflowY: "auto" }}>
+          <ResumoLimite resumo={preview?.resumo || resumoBase} totalItens={preview?.itens?.length || 0} />
+          {preview?.itens?.length > 0 && (
+            <Card title="Itens que serão gerados" size="small" style={{ marginTop: 16 }}>
+              {preview.itens.map((i, idx) => (
+                <div key={idx} style={{ fontSize: 12, marginBottom: 4 }}>
+                  {i.colaboradorNome} — {dayjs(i.dataHe).format("DD/MM/YYYY")} — {i.tipo === "PCT_50" ? "50%" : "100%"} — {i.horas}h
+                </div>
+              ))}
+            </Card>
+          )}
+        </div>
       </Col>
     </Row>
   );

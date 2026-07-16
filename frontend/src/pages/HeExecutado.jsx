@@ -39,8 +39,7 @@ function celulaDiferenca(v) {
 function ImportarModal({ open, onClose, onImportado }) {
   const [arquivo, setArquivo] = useState(null);
   const [resultado, setResultado] = useState(null);
-  const [processandoPreview, setProcessandoPreview] = useState(false);
-  const [confirmando, setConfirmando] = useState(false);
+  const [importando, setImportando] = useState(false);
 
   function fechar() {
     setArquivo(null);
@@ -48,34 +47,25 @@ function ImportarModal({ open, onClose, onImportado }) {
     onClose();
   }
 
-  async function preview() {
-    if (!arquivo) return message.warning("Selecione um arquivo");
-    setProcessandoPreview(true);
-    try {
-      const formData = new FormData();
-      formData.append("arquivo", arquivo);
-      const { data } = await api.post("/he-executado/importar?commit=false", formData, { headers: { "Content-Type": "multipart/form-data" } });
-      setResultado(data.data);
-    } catch (err) {
-      message.error(err.message);
-    } finally {
-      setProcessandoPreview(false);
-    }
+  function importarOutroArquivo() {
+    setArquivo(null);
+    setResultado(null);
   }
 
-  async function confirmar() {
-    setConfirmando(true);
+  async function importar() {
+    if (!arquivo) return message.warning("Selecione um arquivo");
+    setImportando(true);
     try {
       const formData = new FormData();
       formData.append("arquivo", arquivo);
       const { data } = await api.post("/he-executado/importar?commit=true", formData, { headers: { "Content-Type": "multipart/form-data" } });
-      message.success(`Importação concluída: ${data.data.inseridos} registros`);
-      fechar();
+      setResultado(data.data);
+      setArquivo(null);
       onImportado();
     } catch (err) {
       message.error(err.message);
     } finally {
-      setConfirmando(false);
+      setImportando(false);
     }
   }
 
@@ -84,20 +74,25 @@ function ImportarModal({ open, onClose, onImportado }) {
       <div style={{ marginBottom: 12, fontSize: 12, color: "var(--he-text-muted)" }}>
         Envie a planilha com as horas realmente realizadas em campo (extraída do sistema de ponto). Apenas as linhas cujo
         EVENTO seja "Hora Extra 50%" ou "Horas Extras 100%" são importadas — as demais (ajuste de ponto, banco de horas etc.)
-        são ignoradas automaticamente.
+        são ignoradas automaticamente. Linhas com erro não bloqueiam as demais — ao final você vê o que foi importado e o que
+        precisa corrigir.
       </div>
-      <Upload beforeUpload={(file) => { setArquivo(file); setResultado(null); return false; }} maxCount={1}>
-        <Button icon={<UploadOutlined />}>Selecionar base_he_executado.xlsx</Button>
-      </Upload>
-      <Space style={{ marginTop: 12 }}>
-        <Button type="primary" onClick={preview} disabled={!arquivo} loading={processandoPreview}>Pré-visualizar</Button>
-        {resultado && <Button onClick={confirmar} loading={confirmando}>Confirmar importação</Button>}
-      </Space>
+      {!resultado && (
+        <>
+          <Upload beforeUpload={(file) => { setArquivo(file); return false; }} onRemove={() => setArquivo(null)} maxCount={1}>
+            <Button icon={<UploadOutlined />}>Selecionar base_he_executado.xlsx</Button>
+          </Upload>
+          <Space style={{ marginTop: 12 }}>
+            <Button type="primary" onClick={importar} disabled={!arquivo} loading={importando}>Importar</Button>
+          </Space>
+        </>
+      )}
       {resultado && (
         <>
           <Alert
             style={{ marginTop: 16 }}
             type={resultado.erros > 0 ? "warning" : "success"}
+            showIcon
             message={`${resultado.totalLinhas} linhas — ${resultado.inseridos} de HE (50%/100%) — ${resultado.ignorados || 0} ignoradas (outros eventos) — ${resultado.erros} com erro`}
           />
           {resultado.detalheErros?.length > 0 && (
@@ -117,6 +112,10 @@ function ImportarModal({ open, onClose, onImportado }) {
               {resultado.detalheIgnorados.length > 50 && <div>... e mais {resultado.detalheIgnorados.length - 50} linha(s)</div>}
             </div>
           )}
+          <Space style={{ marginTop: 16 }}>
+            <Button onClick={importarOutroArquivo}>Importar outro arquivo</Button>
+            <Button type="primary" onClick={fechar}>Fechar</Button>
+          </Space>
         </>
       )}
     </Modal>

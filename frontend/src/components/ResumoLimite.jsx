@@ -1,6 +1,7 @@
 import React from "react";
 import { Card, Tag, Empty, Tooltip, Space, Progress } from "antd";
-import { QuestionCircleOutlined } from "@ant-design/icons";
+import { QuestionCircleOutlined, HistoryOutlined } from "@ant-design/icons";
+import dayjs from "dayjs";
 
 const formatador = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -27,7 +28,7 @@ function Linha({ label, valor, cor, forte }) {
 export default function ResumoLimite({ resumo, totalItens }) {
   if (!resumo) {
     return (
-      <Card title={tituloComDica} size="small" style={{ position: "sticky", top: 16 }}>
+      <Card title={tituloComDica} size="small">
         <Empty description="Selecione o gerente para ver o resumo" image={Empty.PRESENTED_IMAGE_SIMPLE} />
       </Card>
     );
@@ -36,12 +37,29 @@ export default function ResumoLimite({ resumo, totalItens }) {
   const pctUsado = resumo.valorLimite > 0 ? (resumo.valorAposSolicitar / resumo.valorLimite) * 100 : 0;
 
   return (
-    <Card title={tituloComDica} size="small" style={{ position: "sticky", top: 16 }} bodyStyle={{ padding: "10px 14px" }}>
+    <Card title={tituloComDica} size="small" bodyStyle={{ padding: "10px 14px" }}>
       <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>{resumo.gerenteNome}</div>
       <Linha label="Limite mensal" valor={formatador.format(resumo.valorLimite)} />
       <Linha label={`Já aprovado (${resumo.competencia})`} valor={formatador.format(resumo.valorAprovado)} cor="#3f8600" />
       <Linha label="Pendente de aprovação" valor={formatador.format(resumo.valorPendente)} cor="#d48806" />
       <Linha label="Esta solicitação" valor={formatador.format(resumo.valorDestaSolicitacao)} />
+      <Linha
+        label={
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+            <span>{`HE executado (${resumo.competencia})`}</span>
+            <Tooltip title="Total de horas já batidas no ponto pela gerência inteira nesta competência, segundo a base de HE Executado. Vem de importação manual e pode estar desatualizado.">
+              <QuestionCircleOutlined style={{ cursor: "help" }} />
+            </Tooltip>
+          </span>
+        }
+        valor={`${resumo.horasExecutadas}h — ${formatador.format(resumo.valorExecutado)}`}
+      />
+      {resumo.executadoAtualizadoEm && (
+        <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "var(--he-text-muted)", marginTop: -1 }}>
+          <HistoryOutlined />
+          <span>Base atualizada em {dayjs(resumo.executadoAtualizadoEm).format("DD/MM/YYYY")}</span>
+        </div>
+      )}
 
       <Progress
         percent={Math.min(pctUsado, 100)}

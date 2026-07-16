@@ -42,7 +42,12 @@ export default function AppLayout() {
 
   return (
     <Layout style={{ minHeight: "100vh" }}>
-      <Sider collapsible collapsed={collapsed} onCollapse={setCollapsed}>
+      <Sider
+        collapsible
+        collapsed={collapsed}
+        onCollapse={setCollapsed}
+        style={{ position: "fixed", insetInlineStart: 0, top: 0, bottom: 0, overflow: "auto", zIndex: 10 }}
+      >
         <div
           style={{
             height: 48,
@@ -70,7 +75,7 @@ export default function AppLayout() {
           onClick={({ key }) => navigate(key)}
         />
       </Sider>
-      <Layout>
+      <Layout style={{ marginInlineStart: collapsed ? 80 : 200, transition: "margin-inline-start 0.2s" }}>
         <Header
           style={{
             background: token.colorBgContainer,
