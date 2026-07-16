@@ -70,7 +70,7 @@ export default function ResumoLimite({ resumo, totalItens }) {
         style={{ margin: "6px 0 2px" }}
       />
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4 }}>
+      <div style={{ marginTop: 4 }}>
         <Linha label="Após solicitar" valor={formatador.format(resumo.valorAposSolicitar)} cor={resumo.acimaDoLimite ? "#cf1322" : "#3f8600"} forte />
       </div>
       <Space size={8} style={{ marginTop: 2 }}>
