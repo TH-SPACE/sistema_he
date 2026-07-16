@@ -231,29 +231,26 @@ export default function NovaSolicitacao() {
               </Popover>
             </Space>
           }
-          style={{ marginBottom: 16 }}
+          style={{ marginBottom: 12 }}
+          styles={{ body: { padding: "12px 16px" } }}
         >
-          <Space direction="vertical" style={{ width: "100%" }} size="large">
-            <div>
-              <Typography.Text strong>
-                <RotuloComDica dica="O gerente define o limite mensal de horas extras que será consumido por esta solicitação.">
-                  Gerente
-                </RotuloComDica>
-              </Typography.Text>
-              <Select
-                showSearch
-                optionFilterProp="label"
-                style={{ width: "100%", marginTop: 4 }}
-                placeholder="Selecione o gerente responsável"
-                value={gerenteId}
-                onChange={(v) => {
-                  setGerenteId(v);
-                  setLinhas([linhaVazia()]);
-                }}
-                options={gerentes.map((g) => ({ value: g.id, label: g.nome }))}
-              />
-            </div>
-          </Space>
+          <Typography.Text strong>
+            <RotuloComDica dica="O gerente define o limite mensal de horas extras que será consumido por esta solicitação.">
+              Gerente
+            </RotuloComDica>
+          </Typography.Text>
+          <Select
+            showSearch
+            optionFilterProp="label"
+            style={{ width: "100%", marginTop: 4 }}
+            placeholder="Selecione o gerente responsável"
+            value={gerenteId}
+            onChange={(v) => {
+              setGerenteId(v);
+              setLinhas([linhaVazia()]);
+            }}
+            options={gerentes.map((g) => ({ value: g.id, label: g.nome }))}
+          />
         </Card>
 
         {linhas.map((linha, idx) => (
@@ -263,13 +260,18 @@ export default function NovaSolicitacao() {
             title={`Colaborador ${idx + 1}`}
             extra={
               linhas.length > 1 && (
-                <Button danger type="text" icon={<DeleteOutlined />} onClick={() => removerColaborador(linha.key)} />
+                <Button danger type="text" size="small" icon={<DeleteOutlined />} onClick={() => removerColaborador(linha.key)} />
               )
             }
-            style={{ marginBottom: 12 }}
+            style={{ marginBottom: 8 }}
           >
             <Row gutter={12}>
-              <Col span={24} style={{ marginBottom: 12 }}>
+              <Col span={14}>
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  <RotuloComDica dica="Busque por nome ou matrícula. Só aparecem colaboradores da equipe do gerente selecionado.">
+                    Colaborador
+                  </RotuloComDica>
+                </Typography.Text>
                 <SelectColaborador
                   gerenteId={gerenteId}
                   value={linha.colaboradorId}
@@ -277,36 +279,38 @@ export default function NovaSolicitacao() {
                   onChange={(v, option) => atualizarColaborador(linha.key, v, option)}
                 />
               </Col>
-              <Col span={24}>
-                <Typography.Text type="secondary">
+              <Col span={10}>
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
                   <RotuloComDica dica="Motivo da hora extra. Usado para relatórios e para entender onde a HE está sendo mais utilizada.">
                     Justificativa
                   </RotuloComDica>
                 </Typography.Text>
                 <Select
-                  style={{ width: "100%", marginTop: 4 }}
+                  style={{ width: "100%" }}
                   placeholder="Selecione"
                   value={linha.justificativa}
                   onChange={(v) => atualizarLinha(linha.key, "justificativa", v)}
                   options={JUSTIFICATIVAS}
                 />
               </Col>
-              <Col span={24} style={{ marginTop: 12 }}>
-                <Typography.Text type="secondary">
-                  <RotuloComDica dica="Cada linha é um dia de HE com seu próprio tipo (50% ou 100%) e quantidade de horas. Clique no + para adicionar outro dia.">
-                    Datas, tipo e horas da HE
-                  </RotuloComDica>
-                </Typography.Text>
-                <Row gutter={8} style={{ marginTop: 4 }}>
-                  <Col span={7}><Typography.Text type="secondary" style={{ fontSize: 12 }}>Data</Typography.Text></Col>
+              <Col span={24} style={{ marginTop: 8 }}>
+                <Row gutter={8}>
+                  <Col span={7}>
+                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                      <RotuloComDica dica="Cada linha é um dia de HE com seu próprio tipo (50% ou 100%) e quantidade de horas. Clique no + para adicionar outro dia.">
+                        Data
+                      </RotuloComDica>
+                    </Typography.Text>
+                  </Col>
                   <Col span={8}><Typography.Text type="secondary" style={{ fontSize: 12 }}>Tipo</Typography.Text></Col>
                   <Col span={5}><Typography.Text type="secondary" style={{ fontSize: 12 }}>Horas</Typography.Text></Col>
                 </Row>
-                <Space direction="vertical" style={{ width: "100%", marginTop: 4 }} size={8}>
+                <Space direction="vertical" style={{ width: "100%", marginTop: 4 }} size={6}>
                   {linha.datas.map((d) => (
                     <Row gutter={8} key={d.id} align="middle">
                       <Col span={7}>
                         <DatePicker
+                          size="small"
                           style={{ width: "100%" }}
                           format="DD/MM/YYYY"
                           placeholder="Data"
@@ -317,6 +321,7 @@ export default function NovaSolicitacao() {
                       </Col>
                       <Col span={8}>
                         <Radio.Group
+                          size="small"
                           value={d.tipo}
                           onChange={(e) => atualizarData(linha.key, d.id, "tipo", e.target.value)}
                           style={{ display: "flex" }}
@@ -327,6 +332,7 @@ export default function NovaSolicitacao() {
                       </Col>
                       <Col span={5}>
                         <InputNumber
+                          size="small"
                           min={0.5}
                           step={0.5}
                           style={{ width: "100%" }}
@@ -339,6 +345,7 @@ export default function NovaSolicitacao() {
                         <Button
                           danger
                           type="text"
+                          size="small"
                           icon={<DeleteOutlined />}
                           disabled={linha.datas.length === 1}
                           onClick={() => removerData(linha.key, d.id)}
@@ -347,7 +354,7 @@ export default function NovaSolicitacao() {
                     </Row>
                   ))}
                 </Space>
-                <Button type="dashed" size="small" icon={<PlusOutlined />} onClick={() => adicionarData(linha.key)} style={{ marginTop: 8 }}>
+                <Button type="dashed" size="small" icon={<PlusOutlined />} onClick={() => adicionarData(linha.key)} style={{ marginTop: 6 }}>
                   Adicionar data
                 </Button>
               </Col>
