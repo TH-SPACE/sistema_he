@@ -1,10 +1,12 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Card, Table, Button, Space, Modal, Form, Input, Select, Upload, message, Tag, Alert } from "antd";
-import { EditOutlined, PlusOutlined, StopOutlined, UploadOutlined } from "@ant-design/icons";
+import { Card, Table, Button, Space, Modal, Form, Input, Select, Upload, message, Tag, Alert, Popconfirm } from "antd";
+import { DeleteOutlined, EditOutlined, PlusOutlined, StopOutlined, UploadOutlined } from "@ant-design/icons";
 import api from "../services/api";
 import PageTitle from "../components/PageTitle";
+import { useAuth } from "../context/AuthContext";
 
 export default function Colaboradores() {
+  const { usuario } = useAuth();
   const [dados, setDados] = useState({ itens: [], total: 0 });
   const [carregando, setCarregando] = useState(false);
   const [pagina, setPagina] = useState(1);
@@ -14,6 +16,7 @@ export default function Colaboradores() {
   const [modal, setModal] = useState(null);
   const [salvando, setSalvando] = useState(false);
   const [desativandoId, setDesativandoId] = useState(null);
+  const [excluindoId, setExcluindoId] = useState(null);
   const [form] = Form.useForm();
   const [importModal, setImportModal] = useState(false);
   const [resultadoImport, setResultadoImport] = useState(null);
@@ -78,6 +81,19 @@ export default function Colaboradores() {
     }
   }
 
+  async function excluir(id) {
+    setExcluindoId(id);
+    try {
+      await api.delete(`/colaboradores/${id}/permanente`);
+      message.success("Colaborador excluído");
+      await carregar();
+    } catch (err) {
+      message.error(err.message);
+    } finally {
+      setExcluindoId(null);
+    }
+  }
+
   async function processarPreview() {
     if (!arquivoImport) return message.warning("Selecione um arquivo");
     setProcessandoPreview(true);
@@ -124,7 +140,18 @@ export default function Colaboradores() {
         <Space>
           <Button size="small" icon={<EditOutlined />} onClick={() => abrir(row)} />
           {row.ativo && (
-            <Button size="small" danger icon={<StopOutlined />} loading={desativandoId === row.id} onClick={() => desativar(row.id)} />
+            <Popconfirm title="Desativar este colaborador?" onConfirm={() => desativar(row.id)}>
+              <Button size="small" danger icon={<StopOutlined />} loading={desativandoId === row.id} />
+            </Popconfirm>
+          )}
+          {usuario?.perfil === "ADMIN" && (
+            <Popconfirm
+              title="Excluir definitivamente este colaborador?"
+              description="Essa ação não pode ser desfeita. Se ele tiver solicitações de HE vinculadas, a exclusão será bloqueada."
+              onConfirm={() => excluir(row.id)}
+            >
+              <Button size="small" danger icon={<DeleteOutlined />} loading={excluindoId === row.id} />
+            </Popconfirm>
           )}
         </Space>
       ),

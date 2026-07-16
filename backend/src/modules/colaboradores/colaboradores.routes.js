@@ -104,6 +104,37 @@ router.delete("/:id", requirePerfil("FOCAL", "ADMIN"), async (req, res, next) =>
   }
 });
 
+// Exclusão definitiva (só ADMIN): diferente do DELETE acima, que apenas
+// desativa. Bloqueada quando o colaborador tem solicitações de HE vinculadas,
+// para não perder o histórico — nesse caso o admin deve desativar em vez de
+// excluir.
+router.delete("/:id/permanente", requirePerfil("ADMIN"), async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    const antes = await prisma.colaborador.findUnique({ where: { id } });
+    if (!antes) {
+      return res.status(404).json({ data: null, error: "Colaborador não encontrado" });
+    }
+
+    try {
+      await prisma.colaborador.delete({ where: { id } });
+    } catch (err) {
+      if (err.code === "P2003") {
+        return res.status(409).json({
+          data: null,
+          error: "Não é possível excluir: este colaborador possui solicitações de HE vinculadas. Desative-o em vez de excluir.",
+        });
+      }
+      throw err;
+    }
+
+    await registrarAuditoria({ ...auditContext(req), acao: "EXCLUIR_COLABORADOR", entidade: "Colaborador", entidadeId: id, dadosAntes: antes });
+    res.json({ data: true, error: null });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.post("/importar", requirePerfil("FOCAL", "ADMIN"), upload.single("arquivo"), async (req, res, next) => {
   try {
     if (!req.file) {
