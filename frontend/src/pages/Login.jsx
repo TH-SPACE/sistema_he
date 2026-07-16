@@ -85,7 +85,7 @@ export default function Login() {
           </Form>
         </Card>
       </div>
-      <div style={{ textAlign: "center", color: "rgba(0,0,0,0.45)", fontSize: 12, padding: 16 }}>
+      <div style={{ textAlign: "center", color: "rgba(0,0,0,0.65)", fontSize: 12, padding: 16 }}>
         Portal HE - CONO — Responsável: Thiago Alves Nunes
       </div>
 

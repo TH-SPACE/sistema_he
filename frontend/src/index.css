@@ -103,7 +103,9 @@ body {
   --he-footer-bg: #f5f5f5;
   --he-footer-border: #c9c9c9;
   --he-text-strong: rgba(0, 0, 0, 0.85);
-  --he-text-muted: rgba(0, 0, 0, 0.45);
+  /* Mais escuro que o padrão do antd (0.45): em telas com brilho baixo os
+     rótulos e dicas em cinza claro ficavam ilegíveis. */
+  --he-text-muted: rgba(0, 0, 0, 0.65);
   --he-text-disabled: rgba(0, 0, 0, 0.35);
   --he-link: #1677ff;
 }
@@ -117,7 +119,7 @@ body {
   --he-footer-bg: #262626;
   --he-footer-border: #3a3a3a;
   --he-text-strong: rgba(255, 255, 255, 0.85);
-  --he-text-muted: rgba(255, 255, 255, 0.5);
+  --he-text-muted: rgba(255, 255, 255, 0.68);
   --he-text-disabled: rgba(255, 255, 255, 0.3);
   --he-link: #4096ff;
 }

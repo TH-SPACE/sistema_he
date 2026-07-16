@@ -2,8 +2,9 @@ const prisma = require("../../config/prisma");
 const { calcularItem, competenciaDe } = require("../../utils/calculoHe");
 
 // Expande o rascunho (gerente + lista de colaboradores, cada um com várias
-// datas) no produto cartesiano colaborador x data, calculando valorHora e
-// valorCalculado (snapshot) para cada item.
+// datas, cada uma com seu próprio tipo e quantidade de horas) no produto
+// cartesiano colaborador x data, calculando valorHora e valorCalculado
+// (snapshot) para cada item.
 async function expandirRascunho({ gerenteId, colaboradores }) {
   const colaboradorIds = colaboradores.map((c) => c.colaboradorId);
   const registros = await prisma.colaborador.findMany({
@@ -18,14 +19,14 @@ async function expandirRascunho({ gerenteId, colaboradores }) {
     if (!colaborador) {
       throw Object.assign(new Error(`Colaborador ${linha.colaboradorId} não encontrado`), { status: 400, expose: true });
     }
-    for (const dataHe of linha.datas) {
-      const { valorHora, valorCalculado } = calcularItem({ cargo: colaborador.cargo, tipo: linha.tipo, horas: linha.horas });
+    for (const { data: dataHe, tipo, horas } of linha.datas) {
+      const { valorHora, valorCalculado } = calcularItem({ cargo: colaborador.cargo, tipo, horas });
       itens.push({
         colaboradorId: colaborador.id,
         colaboradorNome: colaborador.nome,
         dataHe,
-        tipo: linha.tipo,
-        horas: linha.horas,
+        tipo,
+        horas,
         justificativa: linha.justificativa,
         valorHora,
         valorCalculado,

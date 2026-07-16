@@ -13,12 +13,16 @@ import { JUSTIFICATIVAS } from "../constants";
 const RASCUNHO_KEY = "he_rascunho_nova_solicitacao";
 
 let novoId = 0;
+let novoDataId = 0;
+function novaData() {
+  return { id: ++novoDataId, data: null, tipo: "PCT_50", horas: 1 };
+}
 function linhaVazia() {
-  return { key: ++novoId, colaboradorId: null, colaboradorNome: null, tipo: "PCT_50", horas: 1, justificativa: null, datas: [] };
+  return { key: ++novoId, colaboradorId: null, colaboradorNome: null, justificativa: null, datas: [novaData()] };
 }
 
 function rascunhoTemConteudo(gerenteId, linhas) {
-  return !!gerenteId || linhas.some((l) => l.colaboradorId || l.justificativa || l.datas.length > 0);
+  return !!gerenteId || linhas.some((l) => l.colaboradorId || l.justificativa || l.datas.some((d) => d.data));
 }
 
 function salvarRascunho(gerenteId, linhas) {
@@ -28,7 +32,7 @@ function salvarRascunho(gerenteId, linhas) {
   }
   const serializado = {
     gerenteId,
-    linhas: linhas.map((l) => ({ ...l, datas: l.datas.map((d) => d.format("YYYY-MM-DD")) })),
+    linhas: linhas.map((l) => ({ ...l, datas: l.datas.map((d) => ({ ...d, data: d.data ? d.data.format("YYYY-MM-DD") : null })) })),
   };
   localStorage.setItem(RASCUNHO_KEY, JSON.stringify(serializado));
 }
@@ -38,7 +42,7 @@ function lerRascunho() {
     const raw = localStorage.getItem(RASCUNHO_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    const linhas = parsed.linhas.map((l) => ({ ...l, datas: l.datas.map((d) => dayjs(d)) }));
+    const linhas = parsed.linhas.map((l) => ({ ...l, datas: l.datas.map((d) => ({ ...d, data: d.data ? dayjs(d.data) : null })) }));
     if (!rascunhoTemConteudo(parsed.gerenteId, linhas)) return null;
     return { gerenteId: parsed.gerenteId, linhas };
   } catch {
@@ -117,13 +121,14 @@ export default function NovaSolicitacao() {
   const payload = useMemo(() => {
     if (!gerenteId) return null;
     const colaboradores = linhas
-      .filter((l) => l.colaboradorId && l.justificativa && l.datas.length > 0 && l.horas > 0)
+      .filter((l) => l.colaboradorId && l.justificativa && l.datas.some((d) => d.data && d.horas > 0))
       .map((l) => ({
         colaboradorId: l.colaboradorId,
         tipo: l.tipo,
-        horas: l.horas,
         justificativa: l.justificativa,
-        datas: l.datas.map((d) => d.format("YYYY-MM-DD")),
+        datas: l.datas
+          .filter((d) => d.data && d.horas > 0)
+          .map((d) => ({ data: d.data.format("YYYY-MM-DD"), tipo: d.tipo, horas: d.horas })),
       }));
     if (colaboradores.length === 0) return null;
     return { gerenteId, colaboradores };
@@ -163,6 +168,28 @@ export default function NovaSolicitacao() {
     setLinhas((atual) => atual.filter((l) => l.key !== key));
   }
 
+  function adicionarData(linhaKey) {
+    setLinhas((atual) => atual.map((l) => (l.key === linhaKey ? { ...l, datas: [...l.datas, novaData()] } : l)));
+  }
+
+  function removerData(linhaKey, dataId) {
+    setLinhas((atual) =>
+      atual.map((l) => {
+        if (l.key !== linhaKey) return l;
+        const datas = l.datas.filter((d) => d.id !== dataId);
+        return { ...l, datas: datas.length ? datas : [novaData()] };
+      })
+    );
+  }
+
+  function atualizarData(linhaKey, dataId, campo, valor) {
+    setLinhas((atual) =>
+      atual.map((l) =>
+        l.key === linhaKey ? { ...l, datas: l.datas.map((d) => (d.id === dataId ? { ...d, [campo]: valor } : d)) } : l
+      )
+    );
+  }
+
   async function enviar() {
     if (!payload) {
       message.warning("Preencha ao menos um colaborador com data, tipo, horas e justificativa");
@@ -194,8 +221,9 @@ export default function NovaSolicitacao() {
                 content={
                   <div style={{ maxWidth: 320, fontWeight: 400 }}>
                     Escolha o gerente responsável pela equipe, depois adicione um ou mais colaboradores. Para cada colaborador,
-                    informe o tipo de hora extra, a quantidade de horas, a justificativa e os dias em que a HE foi realizada. O
-                    resumo ao lado mostra o valor calculado em tempo real.
+                    informe a justificativa e depois, para cada dia trabalhado, selecione a data, o tipo (50% ou 100%) e a
+                    quantidade de horas — use o + para adicionar outros dias, cada um pode ter um tipo e uma quantidade de horas
+                    diferente. O resumo ao lado mostra o valor calculado em tempo real.
                   </div>
                 }
               >
@@ -249,36 +277,7 @@ export default function NovaSolicitacao() {
                   onChange={(v, option) => atualizarColaborador(linha.key, v, option)}
                 />
               </Col>
-              <Col span={6}>
-                <Typography.Text type="secondary">
-                  <RotuloComDica dica="50% ou 100% de adicional sobre o valor da hora do colaborador, conforme o cargo dele.">
-                    Tipo
-                  </RotuloComDica>
-                </Typography.Text>
-                <Radio.Group
-                  value={linha.tipo}
-                  onChange={(e) => atualizarLinha(linha.key, "tipo", e.target.value)}
-                  style={{ display: "block", marginTop: 4 }}
-                >
-                  <Radio.Button value="PCT_50">50%</Radio.Button>
-                  <Radio.Button value="PCT_100">100%</Radio.Button>
-                </Radio.Group>
-              </Col>
-              <Col span={6}>
-                <Typography.Text type="secondary">
-                  <RotuloComDica dica="Quantidade de horas extras realizadas em cada um dos dias selecionados abaixo.">
-                    Horas
-                  </RotuloComDica>
-                </Typography.Text>
-                <InputNumber
-                  min={0.5}
-                  step={0.5}
-                  style={{ width: "100%", marginTop: 4 }}
-                  value={linha.horas}
-                  onChange={(v) => atualizarLinha(linha.key, "horas", v)}
-                />
-              </Col>
-              <Col span={12}>
+              <Col span={24}>
                 <Typography.Text type="secondary">
                   <RotuloComDica dica="Motivo da hora extra. Usado para relatórios e para entender onde a HE está sendo mais utilizada.">
                     Justificativa
@@ -294,18 +293,63 @@ export default function NovaSolicitacao() {
               </Col>
               <Col span={24} style={{ marginTop: 12 }}>
                 <Typography.Text type="secondary">
-                  <RotuloComDica dica="Você pode marcar vários dias de uma vez no calendário, ou clicar em datas separadas uma a uma. Cada dia marcado vira uma solicitação individual para este colaborador.">
-                    Datas da HE (selecione um ou vários dias)
+                  <RotuloComDica dica="Cada linha é um dia de HE com seu próprio tipo (50% ou 100%) e quantidade de horas. Clique no + para adicionar outro dia.">
+                    Datas, tipo e horas da HE
                   </RotuloComDica>
                 </Typography.Text>
-                <DatePicker
-                  multiple
-                  style={{ width: "100%", marginTop: 4 }}
-                  format="DD/MM/YYYY"
-                  value={linha.datas}
-                  onChange={(v) => atualizarLinha(linha.key, "datas", v || [])}
-                  maxTagCount="responsive"
-                />
+                <Row gutter={8} style={{ marginTop: 4 }}>
+                  <Col span={7}><Typography.Text type="secondary" style={{ fontSize: 12 }}>Data</Typography.Text></Col>
+                  <Col span={8}><Typography.Text type="secondary" style={{ fontSize: 12 }}>Tipo</Typography.Text></Col>
+                  <Col span={5}><Typography.Text type="secondary" style={{ fontSize: 12 }}>Horas</Typography.Text></Col>
+                </Row>
+                <Space direction="vertical" style={{ width: "100%", marginTop: 4 }} size={8}>
+                  {linha.datas.map((d) => (
+                    <Row gutter={8} key={d.id} align="middle">
+                      <Col span={7}>
+                        <DatePicker
+                          style={{ width: "100%" }}
+                          format="DD/MM/YYYY"
+                          placeholder="Data"
+                          value={d.data}
+                          onChange={(v) => atualizarData(linha.key, d.id, "data", v)}
+                          disabledDate={(data) => linha.datas.some((outra) => outra.id !== d.id && outra.data && outra.data.isSame(data, "day"))}
+                        />
+                      </Col>
+                      <Col span={8}>
+                        <Radio.Group
+                          value={d.tipo}
+                          onChange={(e) => atualizarData(linha.key, d.id, "tipo", e.target.value)}
+                          style={{ display: "flex" }}
+                        >
+                          <Radio.Button value="PCT_50" style={{ flex: 1, textAlign: "center" }}>50%</Radio.Button>
+                          <Radio.Button value="PCT_100" style={{ flex: 1, textAlign: "center" }}>100%</Radio.Button>
+                        </Radio.Group>
+                      </Col>
+                      <Col span={5}>
+                        <InputNumber
+                          min={0.5}
+                          step={0.5}
+                          style={{ width: "100%" }}
+                          placeholder="Horas"
+                          value={d.horas}
+                          onChange={(v) => atualizarData(linha.key, d.id, "horas", v)}
+                        />
+                      </Col>
+                      <Col span={4}>
+                        <Button
+                          danger
+                          type="text"
+                          icon={<DeleteOutlined />}
+                          disabled={linha.datas.length === 1}
+                          onClick={() => removerData(linha.key, d.id)}
+                        />
+                      </Col>
+                    </Row>
+                  ))}
+                </Space>
+                <Button type="dashed" size="small" icon={<PlusOutlined />} onClick={() => adicionarData(linha.key)} style={{ marginTop: 8 }}>
+                  Adicionar data
+                </Button>
               </Col>
             </Row>
           </Card>

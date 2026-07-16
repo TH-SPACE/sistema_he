@@ -23,7 +23,12 @@ function AntdThemedApp() {
       theme={{
         algorithm: modoEscuro ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
         token: modoEscuro
-          ? { colorPrimary: "#1677ff" }
+          ? {
+              colorPrimary: "#1677ff",
+              // texto secundário (rótulos, dicas, Typography type="secondary")
+              // mais claro/legível que o padrão do antd no tema escuro.
+              colorTextDescription: "rgba(255, 255, 255, 0.68)",
+            }
           : {
               colorPrimary: "#1677ff",
               // bordas um pouco mais escuras que o padrão do antd: em alguns
@@ -33,6 +38,10 @@ function AntdThemedApp() {
               colorBorder: "#b3b3b3",
               colorBorderSecondary: "#d0d0d0",
               colorSplit: "#d0d0d0",
+              // idem para o texto secundário: o cinza padrão (0.45) fica
+              // apagado demais em telas comuns, prejudicando a leitura de
+              // rótulos e dicas espalhados pelo sistema.
+              colorTextDescription: "rgba(0, 0, 0, 0.65)",
             },
       }}
     >

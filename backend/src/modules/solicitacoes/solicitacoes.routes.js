@@ -14,12 +14,16 @@ const JUSTIFICATIVAS = [
   "BACKOFFICE", "REPARO", "PRODUCAO", "MANUTENCAO_DE_REDES", "MOVEL", "O_E_M",
 ];
 
-const linhaSchema = z.object({
-  colaboradorId: z.number().int(),
+const dataHorasSchema = z.object({
+  data: z.string(),
   tipo: z.enum(TIPOS),
   horas: z.coerce.number().positive(),
+});
+
+const linhaSchema = z.object({
+  colaboradorId: z.number().int(),
   justificativa: z.enum(JUSTIFICATIVAS),
-  datas: z.array(z.string()).min(1),
+  datas: z.array(dataHorasSchema).min(1),
 });
 
 const rascunhoSchema = z.object({
