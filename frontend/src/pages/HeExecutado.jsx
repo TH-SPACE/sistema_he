@@ -425,10 +425,10 @@ function ReconciliacaoColaborador({ competencia, recarregarChave }) {
       </Space>
       {dados && (
         <Row gutter={16} style={{ marginBottom: 16 }}>
-          <Col span={6}><Statistic title="Aderência" value={dados.kpis.aderenciaPct} suffix="%" /></Col>
-          <Col span={6}><Statistic title="Total Aprovado" value={dados.kpis.totalAprovado} suffix="h" /></Col>
-          <Col span={6}><Statistic title="Total Executado" value={dados.kpis.totalExecutado} suffix="h" /></Col>
-          <Col span={6}><Statistic title="Executado sem aprovação" value={dados.kpis.totalExecutadoSemAprovacao} suffix="h" /></Col>
+          <Col span={6}><Statistic title="Aderência" value={dados.kpis.aderenciaPct} precision={1} suffix="%" /></Col>
+          <Col span={6}><Statistic title="Total Aprovado" value={dados.kpis.totalAprovado} precision={2} suffix="h" /></Col>
+          <Col span={6}><Statistic title="Total Executado" value={dados.kpis.totalExecutado} precision={2} suffix="h" /></Col>
+          <Col span={6}><Statistic title="Executado sem aprovação" value={dados.kpis.totalExecutadoSemAprovacao} precision={2} suffix="h" /></Col>
         </Row>
       )}
       <Table

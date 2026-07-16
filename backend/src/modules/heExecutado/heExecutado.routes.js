@@ -303,6 +303,7 @@ router.get("/reconciliacao", requirePerfil("SOLICITADOR", "APROVADOR", "FOCAL", 
 
     linhas.sort((a, b) => a.nome.localeCompare(b.nome));
 
+    const arredondar = (v) => Number(v.toFixed(2));
     const totalAprovado = linhas.reduce((acc, l) => acc + l.horasAprovadas, 0);
     const totalExecutado = linhas.reduce((acc, l) => acc + l.horasExecutadas, 0);
     const dentroDoAprovado = linhas.filter((l) => l.status !== "EXECUTADO_A_MAIS" && l.status !== "EXECUTADO_SEM_APROVACAO").reduce((acc, l) => acc + Math.min(l.horasAprovadas, l.horasExecutadas), 0);
@@ -312,10 +313,10 @@ router.get("/reconciliacao", requirePerfil("SOLICITADOR", "APROVADOR", "FOCAL", 
         linhas,
         kpis: {
           aderenciaPct: totalAprovado > 0 ? Number(((dentroDoAprovado / totalAprovado) * 100).toFixed(1)) : 0,
-          totalExecutadoSemAprovacao: linhas.filter((l) => l.status === "EXECUTADO_SEM_APROVACAO").reduce((acc, l) => acc + l.horasExecutadas, 0),
-          totalAprovadoNaoExecutado: linhas.filter((l) => l.status === "EXECUTADO_A_MENOS").reduce((acc, l) => acc + (l.horasAprovadas - l.horasExecutadas), 0),
-          totalAprovado,
-          totalExecutado,
+          totalExecutadoSemAprovacao: arredondar(linhas.filter((l) => l.status === "EXECUTADO_SEM_APROVACAO").reduce((acc, l) => acc + l.horasExecutadas, 0)),
+          totalAprovadoNaoExecutado: arredondar(linhas.filter((l) => l.status === "EXECUTADO_A_MENOS").reduce((acc, l) => acc + (l.horasAprovadas - l.horasExecutadas), 0)),
+          totalAprovado: arredondar(totalAprovado),
+          totalExecutado: arredondar(totalExecutado),
         },
       },
       error: null,
