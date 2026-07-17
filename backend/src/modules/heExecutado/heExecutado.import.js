@@ -8,14 +8,19 @@ const { competenciaDe } = require("../../utils/calculoHe");
 //
 // Não há coluna de tipo (50%/100%) separada: o texto de EVENTO classifica a
 // linha (ex.: "Horas Extras 100%", "Hora Extra 50%", mas também eventos que
-// NÃO são HE, como "Ajuste de ponto gestor", "Saldo de Hrs Flexível (-)").
-// Só as linhas cujo EVENTO é reconhecido como HE 50%/100% são de fato
+// NÃO são HE, como "Ajuste de ponto gestor", "Saldo de Hrs Flexível (-)", ou
+// variantes de intervalo como "Hora Extra 50% Interv"/"Hora Extra 100%
+// Interv" que citam o percentual mas não são HE de fato).
+// Só as linhas cujo EVENTO bate exatamente com HE 50%/100% são de fato
 // horas extras executadas — as demais são descartadas na importação (não
 // sobem para a tabela) e contadas à parte, como "ignoradas".
+const EVENTOS_PCT_100 = ["HORA EXTRA 100%", "HORAS EXTRAS 100%", "HORAS EXTRA 100%", "HORA EXTRAS 100%"];
+const EVENTOS_PCT_50 = ["HORA EXTRA 50%", "HORAS EXTRAS 50%", "HORAS EXTRA 50%", "HORA EXTRAS 50%"];
+
 function tipoDoEvento(evento) {
-  const e = String(evento || "").toUpperCase();
-  if (e.includes("100%")) return "PCT_100";
-  if (e.includes("50%")) return "PCT_50";
+  const e = String(evento || "").trim().toUpperCase();
+  if (EVENTOS_PCT_100.includes(e)) return "PCT_100";
+  if (EVENTOS_PCT_50.includes(e)) return "PCT_50";
   return null;
 }
 
