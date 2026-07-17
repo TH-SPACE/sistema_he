@@ -79,9 +79,17 @@ async function importarHeExecutado(buffer, arquivoNome, usuarioId, commit) {
     });
     loteId = lote.id;
 
-    await prisma.heExecutado.createMany({
-      data: validos.map((v) => ({ ...v, loteImportId: loteId })),
-    });
+    // A planilha sempre traz uma janela de meses (ex.: últimos 3). Para
+    // reimportar sem duplicar, substitui por completo os dados das
+    // competências presentes no arquivo, e deixa intactas as competências
+    // mais antigas já importadas anteriormente (fora dessa janela).
+    const competencias = [...new Set(validos.map((v) => v.competencia))];
+    await prisma.$transaction([
+      prisma.heExecutado.deleteMany({ where: { competencia: { in: competencias } } }),
+      prisma.heExecutado.createMany({
+        data: validos.map((v) => ({ ...v, loteImportId: loteId })),
+      }),
+    ]);
   }
 
   return {
