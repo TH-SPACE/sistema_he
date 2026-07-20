@@ -20,10 +20,11 @@ router.post("/solicitar-acesso", async (req, res, next) => {
     const { email } = solicitarAcessoSchema.parse(req.body);
     const { usuario, situacao } = await authService.solicitarAcesso(email);
 
-    const mensagem =
-      situacao === "JA_ATIVO"
-        ? "Seu usuário já está ativo. Você pode fazer login normalmente."
-        : "Solicitação registrada com sucesso. Aguarde aprovação do administrador.";
+    const MENSAGENS = {
+      JA_ATIVO: "Seu usuário já está ativo. Você pode fazer login normalmente.",
+      PENDENTE: "Você já possui um cadastro para este e-mail, aguardando aprovação do administrador.",
+      CRIADO_PENDENTE: "Solicitação registrada com sucesso. Aguarde aprovação do administrador.",
+    };
 
     res.json({
       data: {
@@ -32,7 +33,8 @@ router.post("/solicitar-acesso", async (req, res, next) => {
         email: usuario.email,
         cargoSolicitante: usuario.cargoSolicitante,
         status: usuario.status,
-        mensagem,
+        situacao,
+        mensagem: MENSAGENS[situacao],
       },
       error: null,
     });

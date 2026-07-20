@@ -7,8 +7,18 @@ import PageTitle from "../../components/PageTitle";
 const PERFIS = ["SOLICITADOR", "APROVADOR", "FOCAL", "ADMIN"];
 const STATUS_COLOR = { PENDENTE: "gold", ATIVO: "green", INATIVO: "default" };
 
+const DIACRITICS_REGEX = new RegExp("[\\u0300-\\u036f]", "g");
+
+function normalizar(texto) {
+  return String(texto || "")
+    .normalize("NFD")
+    .replace(DIACRITICS_REGEX, "")
+    .toLowerCase();
+}
+
 export default function Usuarios() {
   const [dados, setDados] = useState([]);
+  const [busca, setBusca] = useState("");
   const [carregando, setCarregando] = useState(false);
   const [gerentes, setGerentes] = useState([]);
   const [modal, setModal] = useState(null); // usuário em edição ou {} para criar
@@ -161,6 +171,15 @@ export default function Usuarios() {
     },
   ];
 
+  const buscaNormalizada = normalizar(busca);
+  const dadosFiltrados = buscaNormalizada
+    ? dados.filter((u) =>
+        [u.username, u.nome, u.email, u.cargoSolicitante, u.perfil, u.gerente?.nome, u.status].some((campo) =>
+          normalizar(campo).includes(buscaNormalizada)
+        )
+      )
+    : dados;
+
   return (
     <Card
       title={<PageTitle icon="vivo-vivinho-escudo-purpura-esquerda-320x320.svg">Usuários</PageTitle>}
@@ -175,7 +194,14 @@ export default function Usuarios() {
         Usuários com status <Tag color="gold" style={{ marginInline: 4 }}>PENDENTE</Tag> se cadastraram pelo login mas ainda
         precisam ser aprovados aqui antes de conseguir acessar o sistema.
       </div>
-      <Table className="tabela-app tabela-compacta" size="small" rowKey="id" dataSource={dados} columns={colunas} loading={carregando} pagination={{ pageSize: 20 }} />
+      <Input.Search
+        placeholder="Buscar por usuário, nome, email, cargo, perfil, gerente ou status"
+        allowClear
+        style={{ width: 360, marginBottom: 12 }}
+        value={busca}
+        onChange={(e) => setBusca(e.target.value)}
+      />
+      <Table className="tabela-app tabela-compacta" size="small" rowKey="id" dataSource={dadosFiltrados} columns={colunas} loading={carregando} pagination={{ pageSize: 20 }} />
       <Modal title={modal?.id ? "Editar usuário" : "Novo usuário"} open={!!modal} onOk={salvar} onCancel={() => setModal(null)} confirmLoading={salvando} forceRender>
         <Form form={form} layout="vertical">
           {!modal?.id && (

@@ -111,7 +111,7 @@ export default function Login() {
           {resultadoSolicitacao?.erro && <Alert type="error" message={resultadoSolicitacao.erro} showIcon />}
           {resultadoSolicitacao?.mensagem && (
             <Alert
-              type="success"
+              type={resultadoSolicitacao.situacao === "CRIADO_PENDENTE" ? "success" : "warning"}
               showIcon
               message={resultadoSolicitacao.mensagem}
               description={
